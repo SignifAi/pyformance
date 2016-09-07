@@ -33,6 +33,11 @@ def NewRelicReporter(*args, **kwargs):
     return cls(*args, **kwargs)
 
 
+def NewRelicSink(*args, **kwargs):
+    from .newrelic_reporter import NewRelicSink as cls
+    return cls(*args, **kwargs)
+
+
 def InfluxReporter(*args, **kwargs):
     from .influx import InfluxReporter as cls
     return cls(*args, **kwargs)

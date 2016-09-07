@@ -13,7 +13,7 @@ class MetricsRegistry(object):
     a reference back to its service. The service would create a
     L{MetricsRegistry} to manage all of its metrics tools.
     """
-    def __init__(self, clock = time):
+    def __init__(self, clock=time, sink=None):
         """
         Creates a new L{MetricsRegistry} instance.
         """
@@ -23,6 +23,7 @@ class MetricsRegistry(object):
         self._histograms = {}
         self._gauges = {}
         self._clock = clock
+        self._sink = sink
 
     def add(self, key, metric):
         """
@@ -100,6 +101,10 @@ class MetricsRegistry(object):
             self._meters[key] = Meter(clock=self._clock)
         return self._meters[key]
 
+    @property
+    def sink(self):
+        return self._sink if self._sink else self.create_sink()
+
     def create_sink(self):
         return None
 
@@ -113,7 +118,7 @@ class MetricsRegistry(object):
         :return: L{Timer}
         """
         if key not in self._timers:
-            self._timers[key] = Timer(clock=self._clock, sink=self.create_sink())
+            self._timers[key] = Timer(clock=self._clock, sink=self.sink)
         return self._timers[key]
 
     def clear(self):

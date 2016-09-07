@@ -1,14 +1,15 @@
 import os
 import socket
 
-from pyformance.reporters.newrelic_reporter import NewRelicReporter, NewRelicRegistry
+from pyformance import MetricsRegistry
+from pyformance.reporters.newrelic_reporter import NewRelicReporter, NewRelicSink
 from tests import TimedTestCase
 
 
 class TestNewRelicReporter(TimedTestCase):
     def setUp(self):
         super(TestNewRelicReporter, self).setUp()
-        self.registry = NewRelicRegistry(clock=self.clock)
+        self.registry = MetricsRegistry(clock=self.clock, sink=NewRelicSink())
         self.maxDiff = None
 
     def tearDown(self):

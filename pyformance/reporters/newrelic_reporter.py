@@ -4,7 +4,8 @@ import json
 import os
 import socket
 import sys
-from pyformance.registry import set_global_registry, MetricsRegistry
+from pyformance.__version__ import __version__
+from .reporter import Reporter
 
 if sys.version_info[0] > 2:
     import urllib.request as urllib
@@ -13,16 +14,8 @@ else:
     import urllib2 as urllib
     import urllib2 as urlerror
 
-from pyformance.__version__ import __version__
-
-from .reporter import Reporter
-
-DEFAULT_CARBON_SERVER = '0.0.0.0'
-DEFAULT_CARBON_PORT = 2003
-
 
 class NewRelicSink(object):
-
     def __init__(self):
         self.total = 0
         self.count = 0
@@ -37,14 +30,6 @@ class NewRelicSink(object):
         self.min = min(self.min, seconds) if self.min else seconds
         self.max = max(self.max, seconds) if self.max else seconds
         pass
-
-
-class NewRelicRegistry(MetricsRegistry):
-    def create_sink(self):
-        return NewRelicSink()
-
-
-set_global_registry(NewRelicRegistry())
 
 
 class NewRelicReporter(Reporter):
