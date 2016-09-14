@@ -3,6 +3,7 @@ import os
 import socket
 
 from pyformance import MetricsRegistry
+from pyformance.meters import SimpleGauge
 from pyformance.reporters.newrelic_reporter import NewRelicReporter, NewRelicSink
 from tests import TimedTestCase
 
@@ -26,6 +27,9 @@ class TestNewRelicReporter(TimedTestCase):
         t1 = self.registry.timer("t1")
         m1 = self.registry.meter("m1")
         m1.mark()
+        gauge = self.registry.gauge('g1', SimpleGauge())
+        gauge_value = 10
+        gauge.set_value(gauge_value)
         with t1.time():
             c1 = self.registry.counter("counter-1")
             c2 = self.registry.counter("counter-2")
@@ -47,7 +51,9 @@ class TestNewRelicReporter(TimedTestCase):
                     "metrics": {
                         "Component/counter-1": {"count": 1, "max": 1, "min": 1, "sum_of_squares": 1, "total": 1},
                         "Component/counter-2": {"count": 2, "max": -1, "min": -2, "sum_of_squares": 5, "total": -3},
-                        "Component/t1": {"count": 1, "max": 1, "min": 1, "sum_of_squares": 1, "total": 1}},
+                        "Component/t1": {"count": 1, "max": 1, "min": 1, "sum_of_squares": 1, "total": 1},
+                        "Component/g1": gauge_value
+                    },
                     "name": "foo"}
             ]
         }

@@ -88,15 +88,19 @@ class NewRelicReporter(Reporter):
     def create_metrics(self, registry):
         results = {}
         # noinspection PyProtectedMember
-        meters = chain(registry._timers.items(), registry._counters.items())
-        for key, value in meters:
+        gauges = registry._gauges.items()
+        for key, gauge in gauges:
+            results[self._get_key_name(key)] = gauge.get_value()
+
+        # noinspection PyProtectedMember
+        sink_meters = chain(registry._timers.items(), registry._counters.items())
+        for key, value in sink_meters:
             sink = value.sink
 
             if not sink.count:
                 continue
 
-            full_key = 'Component/{}{}'.format(self.prefix, key)
-            results[full_key.replace('.', '/')] = {
+            results[self._get_key_name(key)] = {
                 "total": sink.total,
                 "count": sink.count,
                 "min": sink.min,
@@ -106,6 +110,9 @@ class NewRelicReporter(Reporter):
             sink.__init__()
 
         return results
+
+    def _get_key_name(self, key):
+        return 'Component/{}{}'.format(self.prefix, key).replace('.', '/')
 
     def collect_metrics(self, registry):
         body = {
