@@ -93,7 +93,7 @@ class NewRelicReporter(Reporter):
             results[self._get_key_name(key)] = gauge.get_value()
 
         # noinspection PyProtectedMember
-        sink_meters = chain(registry._timers.items(), registry._counters.items())
+        sink_meters = chain(registry._timers.items(), registry._counters.items(), registry._histograms.items())
         for key, value in sink_meters:
             sink = value.sink
 

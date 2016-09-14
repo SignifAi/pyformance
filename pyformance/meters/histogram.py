@@ -11,7 +11,7 @@ class Histogram(object):
     """
 
     def __init__(self, size=DEFAULT_SIZE, alpha=DEFAULT_ALPHA, clock=time,
-                 sample=None):
+                 sample=None, sink=None):
         """
         Creates a new instance of a L{Histogram}.
         """
@@ -22,6 +22,7 @@ class Histogram(object):
             sample = ExpDecayingSample(size, alpha, clock)
         self.sample = sample
         self.clear()
+        self.sink = sink
 
     def add(self, value):
         """
@@ -36,10 +37,13 @@ class Histogram(object):
             self.min = value if value < self.min else self.min
             self.sum = self.sum + value
             self._update_var(value)
+            if self.sink is not None:
+                self.sink.add(value)
 
     def clear(self):
         "reset histogram to initial state"
         with self.lock:
+            self.sink.__init__()
             self.sample.clear()
             self.counter = 0.0
             self.max = -2147483647.0
