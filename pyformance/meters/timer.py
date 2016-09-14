@@ -81,7 +81,7 @@ class Timer(object):
         if seconds >= 0:
             self.hist.add(seconds)
             self.meter.mark()
-            if self.sink:
+            if self.sink is not None:
                 self.sink.add(seconds)
 
     def time(self, *args, **kwargs):

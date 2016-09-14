@@ -1,3 +1,4 @@
+import json
 import os
 import socket
 
@@ -9,7 +10,7 @@ from tests import TimedTestCase
 class TestNewRelicReporter(TimedTestCase):
     def setUp(self):
         super(TestNewRelicReporter, self).setUp()
-        self.registry = MetricsRegistry(clock=self.clock, sink=NewRelicSink())
+        self.registry = MetricsRegistry(clock=self.clock, sink=NewRelicSink)
         self.maxDiff = None
 
     def tearDown(self):
@@ -26,14 +27,29 @@ class TestNewRelicReporter(TimedTestCase):
         m1 = self.registry.meter("m1")
         m1.mark()
         with t1.time():
-            c1 = self.registry.counter("c1")
+            c1 = self.registry.counter("counter-1")
             c2 = self.registry.counter("counter-2")
             c1.inc()
             c2.dec()
             c2.dec()
             self.clock.add(1)
-        output = r.collect_metrics(self.registry)
-        expected = '{"agent": {"host": "%s", "pid": %s, "version": "0.3.2"}, "components": [{"duration": 1, "guid": "com.github.pyformance", "metrics": {"Component/t1": {' \
-                   '"count": 1, "max": 1, "min": 1, "sum_of_squares": 1, "total": 1}}, "name": "foo"}]}' % (socket.gethostname(), os.getpid())
+        output = json.loads(r.collect_metrics(self.registry))
+        expected = {
+            "agent": {
+                "host": socket.gethostname(),
+                "pid": os.getpid(),
+                "version": "0.3.2"
+            },
+            "components": [
+                {
+                    "duration": 1,
+                    "guid": "com.github.pyformance",
+                    "metrics": {
+                        "Component/counter-1": {"count": 1, "max": 1, "min": 1, "sum_of_squares": 1, "total": 1},
+                        "Component/counter-2": {"count": 2, "max": -1, "min": -2, "sum_of_squares": 5, "total": -3},
+                        "Component/t1": {"count": 1, "max": 1, "min": 1, "sum_of_squares": 1, "total": 1}},
+                    "name": "foo"}
+            ]
+        }
 
-        self.assertEqual(expected.replace(".0", ""), output.replace(".0", ""))
+        self.assertEqual(expected, output)

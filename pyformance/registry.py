@@ -23,7 +23,7 @@ class MetricsRegistry(object):
         self._histograms = {}
         self._gauges = {}
         self._clock = clock
-        self._sink = sink
+        self._sink_obj = sink
 
     def add(self, key, metric):
         """
@@ -60,7 +60,7 @@ class MetricsRegistry(object):
         :return: L{Counter}
         """
         if key not in self._counters:
-            self._counters[key] = Counter()
+            self._counters[key] = Counter(sink=self.sink)
         return self._counters[key]
 
     def histogram(self, key):
@@ -103,7 +103,7 @@ class MetricsRegistry(object):
 
     @property
     def sink(self):
-        return self._sink if self._sink else self.create_sink()
+        return self._sink_obj() if self._sink_obj else self.create_sink()
 
     def create_sink(self):
         return None

@@ -4,6 +4,8 @@ import json
 import os
 import socket
 import sys
+from itertools import chain
+
 from pyformance.__version__ import __version__
 from .reporter import Reporter
 
@@ -19,17 +21,24 @@ class NewRelicSink(object):
     def __init__(self):
         self.total = 0
         self.count = 0
-        self.min = None
-        self.max = None
+        self._min = float('inf')
+        self._max = -float('inf')
         self.sum_of_squares = 0
 
-    def add(self, seconds):
-        self.total += seconds
+    def add(self, value):
+        self.total += value
         self.count += 1
-        self.sum_of_squares += seconds * seconds
-        self.min = min(self.min, seconds) if self.min else seconds
-        self.max = max(self.max, seconds) if self.max else seconds
-        pass
+        self.sum_of_squares += value * value
+        self._min = min(self._min, value)
+        self._max = max(self._max, value)
+
+    @property
+    def min(self):
+        return self._min if self._min != float('inf') else 0
+
+    @property
+    def max(self):
+        return self._max if self._max != -float('inf') else 0
 
 
 class NewRelicReporter(Reporter):
@@ -50,7 +59,6 @@ class NewRelicReporter(Reporter):
         self.http_headers = {'Accept': 'application/json',
                              'Content-Type': 'application/json',
                              'X-License-Key': license_key}
-
 
     def report_now(self, registry=None, timestamp=None):
         metrics = self.collect_metrics(registry or self.registry)
@@ -80,14 +88,14 @@ class NewRelicReporter(Reporter):
     def create_metrics(self, registry):
         results = {}
         # noinspection PyProtectedMember
-        timers = registry._timers
-        for key in timers:
-            sink = timers[key].sink
+        meters = chain(registry._timers.items(), registry._counters.items())
+        for key, value in meters:
+            sink = value.sink
 
             if not sink.count:
                 continue
 
-            full_key = 'Component/%s%s' % (self.prefix, key)
+            full_key = 'Component/{}{}'.format(self.prefix, key)
             results[full_key.replace('.', '/')] = {
                 "total": sink.total,
                 "count": sink.count,
@@ -96,6 +104,7 @@ class NewRelicReporter(Reporter):
                 "sum_of_squares": sink.sum_of_squares
             }
             sink.__init__()
+
         return results
 
     def collect_metrics(self, registry):
