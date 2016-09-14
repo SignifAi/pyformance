@@ -1,23 +1,26 @@
 import time
 from threading import Lock
+
+from pyformance.meters.metric import Metric
 from ..stats.moving_average import ExpWeightedMovingAvg
 
 
-class Meter(object):
+class Meter(Metric):
 
     """
     A meter metric which measures mean throughput and one-, five-, and fifteen-minute
     exponentially-weighted moving average throughputs.
     """
 
-    def __init__(self, clock=time):
-        super(Meter, self).__init__()
+    def __init__(self, clock=time, sink=None, unit=None):
+        super(Meter, self).__init__(sink, unit)
         self.lock = Lock()
         self.clock = clock
         self.clear()
 
     def clear(self):
         with self.lock:
+            super(Meter, self).clear()
             self.start_time = self.clock.time()
             self.counter = 0.0
             self.m1rate = ExpWeightedMovingAvg(period=1, clock=self.clock)
@@ -44,6 +47,7 @@ class Meter(object):
             self.m1rate.add(value)
             self.m5rate.add(value)
             self.m15rate.add(value)
+            self.add_to_sink(value)
 
     def get_count(self):
         return self.counter

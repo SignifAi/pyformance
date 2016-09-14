@@ -1,21 +1,23 @@
 import time
 import math
 from threading import Lock
+
+from pyformance.meters.metric import Metric
 from ..stats. samples import ExpDecayingSample, DEFAULT_SIZE, DEFAULT_ALPHA
 
 
-class Histogram(object):
+class Histogram(Metric):
 
     """
     A metric which calculates the distribution of a value.
     """
 
     def __init__(self, size=DEFAULT_SIZE, alpha=DEFAULT_ALPHA, clock=time,
-                 sample=None, sink=None):
+                 sample=None, sink=None, unit=None):
         """
         Creates a new instance of a L{Histogram}.
         """
-        super(Histogram, self).__init__()
+        super(Histogram, self).__init__(sink, unit)
         self.lock = Lock()
         self.clock = clock
         if sample is None:
@@ -37,13 +39,12 @@ class Histogram(object):
             self.min = value if value < self.min else self.min
             self.sum = self.sum + value
             self._update_var(value)
-            if self.sink is not None:
-                self.sink.add(value)
+            self.add_to_sink(value)
 
     def clear(self):
         "reset histogram to initial state"
         with self.lock:
-            self.sink.__init__()
+            super(Histogram, self).clear()
             self.sample.clear()
             self.counter = 0.0
             self.max = -2147483647.0

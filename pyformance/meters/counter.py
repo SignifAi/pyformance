@@ -1,24 +1,24 @@
 from threading import Lock
 
+from pyformance.meters.metric import Metric
 
-class Counter(object):
+
+class Counter(Metric):
 
     """
     An incrementing and decrementing metric
     """
 
-    def __init__(self, sink=None):
-        super(Counter, self).__init__()
+    def __init__(self, sink=None, unit=None):
+        super(Counter, self).__init__(sink, unit)
         self.lock = Lock()
         self.counter = 0
-        self.sink = sink
 
     def inc(self, val=1):
         "increment counter by val (default is 1)"
         with self.lock:
             self.counter += val
-        if self.sink is not None:
-            self.sink.add(self.counter)
+            self.add_to_sink(self.counter)
 
     def dec(self, val=1):
         "decrement counter by val (default is 1)"
@@ -31,4 +31,5 @@ class Counter(object):
     def clear(self):
         "reset counter to 0"
         with self.lock:
+            super(Counter, self).clear()
             self.counter = 0

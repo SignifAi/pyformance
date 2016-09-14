@@ -32,6 +32,13 @@ class NewRelicSink(object):
         self._min = min(self._min, value)
         self._max = max(self._max, value)
 
+    def clear(self):
+        self.total = 0
+        self.count = 0
+        self._min = float('inf')
+        self._max = -float('inf')
+        self.sum_of_squares = 0
+
     @property
     def min(self):
         return self._min if self._min != float('inf') else 0
@@ -39,6 +46,13 @@ class NewRelicSink(object):
     @property
     def max(self):
         return self._max if self._max != -float('inf') else 0
+
+
+def format_unit(metric):
+    if metric.unit is None:
+        return ''
+    else:
+        return '[{}]'.format(metric.unit)
 
 
 class NewRelicReporter(Reporter):
@@ -49,7 +63,7 @@ class NewRelicReporter(Reporter):
     MAX_METRICS_PER_REQUEST = 10000
     PLATFORM_URL = 'https://platform-api.newrelic.com/platform/v1/metrics'
 
-    def __init__(self, license_key, registry=None, name=socket.gethostname(), reporting_interval=5, prefix="",
+    def __init__(self, license_key, registry=None, name=socket.gethostname(), reporting_interval=60, prefix="",
                  clock=None):
         super(NewRelicReporter, self).__init__(
             registry, reporting_interval, clock)
@@ -90,24 +104,26 @@ class NewRelicReporter(Reporter):
         # noinspection PyProtectedMember
         gauges = registry._gauges.items()
         for key, gauge in gauges:
-            results[self._get_key_name(key)] = gauge.get_value()
+            key = '{}/gauge{}'.format(self._get_key_name(key), format_unit(gauge))
+            results[key] = gauge.get_value()
 
         # noinspection PyProtectedMember
-        sink_meters = chain(registry._timers.items(), registry._counters.items(), registry._histograms.items())
+        sink_meters = chain(registry._timers.items(), registry._counters.items(), registry._histograms.items(),
+                            registry._meters.items())
         for key, value in sink_meters:
             sink = value.sink
 
             if not sink.count:
                 continue
-
-            results[self._get_key_name(key)] = {
+            key = "{}/{}{}".format(self._get_key_name(key), "raw", format_unit(value))
+            results[key] = {
                 "total": sink.total,
                 "count": sink.count,
                 "min": sink.min,
                 "max": sink.max,
                 "sum_of_squares": sink.sum_of_squares
             }
-            sink.__init__()
+            sink.clear()
 
         return results
 

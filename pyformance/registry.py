@@ -50,7 +50,7 @@ class MetricsRegistry(object):
                 return
         raise TypeError("Invalid class. Could not register metric %r" % key)
 
-    def counter(self, key):
+    def counter(self, key, unit=None):
         """
         Gets a counter based on a key, creates a new one if it does not exist.
 
@@ -60,10 +60,10 @@ class MetricsRegistry(object):
         :return: L{Counter}
         """
         if key not in self._counters:
-            self._counters[key] = Counter(sink=self.sink)
+            self._counters[key] = Counter(sink=self.sink, unit=unit)
         return self._counters[key]
 
-    def histogram(self, key):
+    def histogram(self, key, unit=None):
         """
         Gets a histogram based on a key, creates a new one if it does not exist.
 
@@ -73,7 +73,7 @@ class MetricsRegistry(object):
         :return: L{Histogram}
         """
         if key not in self._histograms:
-            self._histograms[key] = Histogram(clock=self._clock)
+            self._histograms[key] = Histogram(clock=self._clock, sink=self.sink, unit=unit)
         return self._histograms[key]
 
     def gauge(self, key, gauge=None, default=float("nan")):
@@ -88,7 +88,7 @@ class MetricsRegistry(object):
             self._gauges[key] = gauge
         return self._gauges[key]
 
-    def meter(self, key):
+    def meter(self, key, unit=None):
         """
         Gets a meter based on a key, creates a new one if it does not exist.
 
@@ -98,7 +98,7 @@ class MetricsRegistry(object):
         :return: L{Meter}
         """
         if key not in self._meters:
-            self._meters[key] = Meter(clock=self._clock)
+            self._meters[key] = Meter(clock=self._clock, unit=unit, sink=self.sink)
         return self._meters[key]
 
     @property
@@ -108,7 +108,7 @@ class MetricsRegistry(object):
     def create_sink(self):
         return None
 
-    def timer(self, key):
+    def timer(self, key, unit='event/second'):
         """
         Gets a timer based on a key, creates a new one if it does not exist.
 
@@ -118,7 +118,7 @@ class MetricsRegistry(object):
         :return: L{Timer}
         """
         if key not in self._timers:
-            self._timers[key] = Timer(clock=self._clock, sink=self.sink)
+            self._timers[key] = Timer(clock=self._clock, sink=self.sink, unit=unit)
         return self._timers[key]
 
     def clear(self):

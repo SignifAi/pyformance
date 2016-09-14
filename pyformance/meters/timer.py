@@ -1,4 +1,7 @@
 import time
+
+from pyformance.meters.metric import Metric
+
 try:
     from blinker import Namespace
 except ImportError:
@@ -13,20 +16,17 @@ else:
     call_too_long = None
 
 
-class Timer(object):
-
+class Timer(Metric):
     """
     A timer metric which aggregates timing durations and provides duration statistics, plus
     throughput statistics via Meter and Histogram.
-
     """
 
     def __init__(self, threshold=None, size=DEFAULT_SIZE, alpha=DEFAULT_ALPHA,
-                 clock=time, sink=None, sample=None):
-        super(Timer, self).__init__()
+                 clock=time, sink=None, sample=None, unit=None):
+        super(Timer, self).__init__(sink, unit)
         self.meter = Meter(clock=clock)
         self.hist = Histogram(size=size, alpha=alpha, clock=clock, sample=sample)
-        self.sink = sink
         self.threshold = threshold
 
     def get_count(self):
@@ -81,8 +81,7 @@ class Timer(object):
         if seconds >= 0:
             self.hist.add(seconds)
             self.meter.mark()
-            if self.sink is not None:
-                self.sink.add(seconds)
+            self.add_to_sink(seconds)
 
     def time(self, *args, **kwargs):
         """
@@ -94,6 +93,7 @@ class Timer(object):
 
     def clear(self):
         "clear internal histogram and meter"
+        super(Timer, self).clear()
         self.hist.clear()
         self.meter.clear()
 
