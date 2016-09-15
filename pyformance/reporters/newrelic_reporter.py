@@ -108,6 +108,46 @@ class NewRelicReporter(Reporter):
             results[key] = gauge.get_value()
 
         # noinspection PyProtectedMember
+        for key, histogram in registry._histograms.items():
+            key = self._get_key_name(key)
+            snapshot = histogram.get_snapshot()
+            key = '{}/{{}}{}'.format(key, format_unit(histogram))
+
+            results[key.format('avg')] = histogram.get_mean()
+            results[key.format('std_dev')] = histogram.get_stddev()
+            snapshot = histogram.get_snapshot()
+            results[key.format('75_percentile')] = snapshot.get_75th_percentile()
+            results[key.format('95_percentile')] = snapshot.get_95th_percentile()
+            results[key.format('99_percentile')] = snapshot.get_99th_percentile()
+            results[key.format('999_percentile')] = snapshot.get_999th_percentile()
+
+        # noinspection PyProtectedMember
+        for key, meter in registry._meters.items():
+            key = '{}/{{}}[{}/minute]'.format(self._get_key_name(key), meter.unit if meter.unit else 'event')
+
+            results[key.format('15m_rate')] = meter.get_fifteen_minute_rate()
+            results[key.format('5m_rate')] = meter.get_five_minute_rate()
+            results[key.format('1m_rate')] = meter.get_one_minute_rate()
+            results[key.format('mean_rate')] = meter.get_mean_rate()
+
+        # noinspection PyProtectedMember
+        for key, timer in registry._timers.items():
+            key = '{}/{{}}{}'.format(self._get_key_name(key), format_unit(timer))
+
+            results.update({key.format("avg"): timer.get_mean(),
+                            key.format("count"): timer.get_count(),
+                            key.format("std_dev"): timer.get_stddev(),
+                            key.format("15m_rate"): timer.get_fifteen_minute_rate(),
+                            key.format("5m_rate"): timer.get_five_minute_rate(),
+                            key.format("1m_rate"): timer.get_one_minute_rate(),
+                            key.format("mean_rate"): timer.get_mean_rate(),
+                            key.format("50_percentile"): snapshot.get_median(),
+                            key.format("75_percentile"): snapshot.get_75th_percentile(),
+                            key.format("95_percentile"): snapshot.get_95th_percentile(),
+                            key.format("99_percentile"): snapshot.get_99th_percentile(),
+                            key.format("999_percentile"): snapshot.get_999th_percentile()})
+
+        # noinspection PyProtectedMember
         sink_meters = chain(registry._timers.items(), registry._counters.items(), registry._histograms.items(),
                             registry._meters.items())
         for key, value in sink_meters:
