@@ -108,7 +108,7 @@ class MetricsRegistry(object):
     def create_sink(self):
         return None
 
-    def timer(self, key, unit='event/second'):
+    def timer(self, key, unit='event/minute'):
         """
         Gets a timer based on a key, creates a new one if it does not exist.
 

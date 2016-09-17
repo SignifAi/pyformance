@@ -133,7 +133,7 @@ class NewRelicReporter(Reporter):
         # noinspection PyProtectedMember
         for key, timer in registry._timers.items():
             key = '{}/{{}}{}'.format(self._get_key_name(key), format_unit(timer))
-
+            snapshot = timer.get_snapshot()
             results.update({key.format("avg"): timer.get_mean(),
                             key.format("count"): timer.get_count(),
                             key.format("std_dev"): timer.get_stddev(),
