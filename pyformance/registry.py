@@ -246,20 +246,20 @@ class RegexRegistry(MetricsRegistry):
         key = '/'.join((v for match in matches for v in match.groups() if v))
         return key
 
-    def timer(self, key):
-        return super(RegexRegistry, self).timer(self._get_key(key))
+    def timer(self, key, unit=None):
+        return super(RegexRegistry, self).timer(self._get_key(key), unit=unit)
 
-    def histogram(self, key):
-        return super(RegexRegistry, self).histogram(self._get_key(key))
+    def histogram(self, key, unit=None):
+        return super(RegexRegistry, self).histogram(self._get_key(key), unit=unit)
 
-    def counter(self, key):
-        return super(RegexRegistry, self).counter(self._get_key(key))
+    def counter(self, key, unit=None):
+        return super(RegexRegistry, self).counter(self._get_key(key), unit=unit)
 
-    def gauge(self, key, gauge=None, default=float("nan")):
-        return super(RegexRegistry, self).gauge(self._get_key(key), gauge, default)
+    def gauge(self, key, g=None, default=float("nan")):
+        return super(RegexRegistry, self).gauge(self._get_key(key), g, default)
 
-    def meter(self, key):
-        return super(RegexRegistry, self).meter(self._get_key(key))
+    def meter(self, key, unit=None):
+        return super(RegexRegistry, self).meter(self._get_key(key), unit=unit)
 
 
 _global_registry = MetricsRegistry()
@@ -274,24 +274,24 @@ def set_global_registry(registry):
     _global_registry = registry
 
 
-def counter(key):
-    return _global_registry.counter(key)
+def counter(key, unit=None):
+    return _global_registry.counter(key, unit)
 
 
-def histogram(key):
-    return _global_registry.histogram(key)
+def histogram(key, unit=None):
+    return _global_registry.histogram(key, unit)
 
 
-def meter(key):
-    return _global_registry.meter(key)
+def meter(key, unit=None):
+    return _global_registry.meter(key, unit)
 
 
-def timer(key):
-    return _global_registry.timer(key)
+def timer(key, unit=None):
+    return _global_registry.timer(key, unit)
 
 
-def gauge(key, gauge=None):
-    return _global_registry.gauge(key, gauge)
+def gauge(key, g=None):
+    return _global_registry.gauge(key, g)
 
 
 def dump_metrics():
@@ -301,10 +301,12 @@ def dump_metrics():
 def clear():
     return _global_registry.clear()
 
+
 def get_qualname(obj):
     if sys.version_info[0] > 2:
         return obj.__qualname__
     return obj.__name__
+
 
 def count_calls(fn):
     """

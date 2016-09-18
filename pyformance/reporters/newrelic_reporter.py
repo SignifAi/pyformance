@@ -148,8 +148,9 @@ class NewRelicReporter(Reporter):
                             key.format("999_percentile"): snapshot.get_999th_percentile()})
 
         # noinspection PyProtectedMember
-        sink_meters = chain(registry._timers.items(), registry._counters.items(), registry._histograms.items(),
-                            registry._meters.items())
+        sink_meters = filter(lambda tup: tup[1].sink,
+                             chain(registry._timers.items(), registry._counters.items(), registry._histograms.items(),
+                                   registry._meters.items()))
         for key, value in sink_meters:
             sink = value.sink
 
