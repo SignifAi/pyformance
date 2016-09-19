@@ -5,6 +5,7 @@ import os
 import socket
 import sys
 from itertools import chain
+import six
 
 from pyformance.__version__ import __version__
 from .reporter import Reporter
@@ -16,8 +17,34 @@ else:
     import urllib2 as urllib
     import urllib2 as urlerror
 
+try:
+    import newrelic.agent
+    NEWRELIC_AGENT = True
+except:
+    NEWRELIC_AGENT = False
+
 
 class NewRelicSink(object):
+    def __init__(self):
+        if NEWRELIC_AGENT:
+            self.new_relic_agent_sink = _NewRelicSink()
+        else:
+            self.new_relic_agent_sink = None
+
+        self.regular_sink = _NewRelicSink()
+
+    def add(self, value):
+        if self.new_relic_agent_sink:
+            self.new_relic_agent_sink.add(value)
+        self.regular_sink.add(value)
+
+    def clear(self):
+        if self.new_relic_agent_sink:
+            self.new_relic_agent_sink.clear()
+        self.regular_sink.clear()
+
+
+class _NewRelicSink(object):
     def __init__(self):
         self.total = 0
         self.count = 0
@@ -64,15 +91,28 @@ class NewRelicReporter(Reporter):
     PLATFORM_URL = 'https://platform-api.newrelic.com/platform/v1/metrics'
 
     def __init__(self, license_key, registry=None, name=socket.gethostname(), reporting_interval=60, prefix="",
-                 clock=None):
+                 clock=None, plugin_collection=True):
         super(NewRelicReporter, self).__init__(
             registry, reporting_interval, clock)
         self.name = name
         self.prefix = prefix
+        self.plugin_collection = plugin_collection
 
         self.http_headers = {'Accept': 'application/json',
                              'Content-Type': 'application/json',
                              'X-License-Key': license_key}
+
+        if NEWRELIC_AGENT:
+            @newrelic.agent.data_source_generator(name='Pyformance')
+            def metrics_generator():
+                metrics = self.create_metrics(self.registry, 'new_relic_agent_sink', 'Custom')
+                return six.iteritems(metrics)
+
+            newrelic.agent.register_data_source(metrics_generator)
+
+    def start(self):
+        if self.plugin_collection:
+            super(NewRelicReporter, self).start()
 
     def report_now(self, registry=None, timestamp=None):
         metrics = self.collect_metrics(registry or self.registry)
@@ -99,17 +139,17 @@ class NewRelicReporter(Reporter):
                 'pid': os.getpid(),
                 'version': __version__}
 
-    def create_metrics(self, registry):
+    def create_metrics(self, registry, sink_type='regular_sink', key_name_prefix='Component'):
         results = {}
         # noinspection PyProtectedMember
         gauges = registry._gauges.items()
         for key, gauge in gauges:
-            key = '{}/gauge{}'.format(self._get_key_name(key), format_unit(gauge))
+            key = '{}/gauge{}'.format(self._get_key_name(key, key_name_prefix), format_unit(gauge))
             results[key] = gauge.get_value()
 
         # noinspection PyProtectedMember
         for key, histogram in registry._histograms.items():
-            key = self._get_key_name(key)
+            key = self._get_key_name(key, key_name_prefix)
             snapshot = histogram.get_snapshot()
             key = '{}/{{}}{}'.format(key, format_unit(histogram))
 
@@ -123,7 +163,7 @@ class NewRelicReporter(Reporter):
 
         # noinspection PyProtectedMember
         for key, meter in registry._meters.items():
-            key = '{}/{{}}[{}/minute]'.format(self._get_key_name(key), meter.unit if meter.unit else 'event')
+            key = '{}/{{}}[{}/minute]'.format(self._get_key_name(key, key_name_prefix), meter.unit if meter.unit else 'event')
 
             results[key.format('15m_rate')] = meter.get_fifteen_minute_rate()
             results[key.format('5m_rate')] = meter.get_five_minute_rate()
@@ -132,7 +172,7 @@ class NewRelicReporter(Reporter):
 
         # noinspection PyProtectedMember
         for key, timer in registry._timers.items():
-            key = '{}/{{}}{}'.format(self._get_key_name(key), format_unit(timer))
+            key = '{}/{{}}{}'.format(self._get_key_name(key, key_name_prefix), format_unit(timer))
             snapshot = timer.get_snapshot()
             results.update({key.format("avg"): timer.get_mean(),
                             key.format("count"): timer.get_count(),
@@ -152,11 +192,11 @@ class NewRelicReporter(Reporter):
                              chain(registry._timers.items(), registry._counters.items(), registry._histograms.items(),
                                    registry._meters.items()))
         for key, value in sink_meters:
-            sink = value.sink
+            sink = getattr(value.sink, sink_type)
 
             if not sink.count:
                 continue
-            key = "{}/{}{}".format(self._get_key_name(key), "raw", format_unit(value))
+            key = "{}/{}{}".format(self._get_key_name(key, key_name_prefix), "raw", format_unit(value))
             results[key] = {
                 "total": sink.total,
                 "count": sink.count,
@@ -168,8 +208,8 @@ class NewRelicReporter(Reporter):
 
         return results
 
-    def _get_key_name(self, key):
-        return 'Component/{}{}'.format(self.prefix, key).replace('.', '/')
+    def _get_key_name(self, key, prefix="Component"):
+        return '{}/{}{}'.format(prefix, self.prefix, key).replace('.', '/')
 
     def collect_metrics(self, registry):
         body = {
