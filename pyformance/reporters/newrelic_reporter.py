@@ -90,12 +90,12 @@ class NewRelicReporter(Reporter):
     MAX_METRICS_PER_REQUEST = 10000
     PLATFORM_URL = 'https://platform-api.newrelic.com/platform/v1/metrics'
 
-    def __init__(self, license_key, registry=None, name=socket.gethostname(), reporting_interval=60, prefix="",
+    def __init__(self, license_key, registry=None, name=socket.gethostname(), reporting_interval=60, prefix=None,
                  clock=None, plugin_collection=True):
         super(NewRelicReporter, self).__init__(
             registry, reporting_interval, clock)
         self.name = name
-        self.prefix = prefix
+        self.prefix = prefix + "/" if prefix is not None else ""
         self.plugin_collection = plugin_collection
 
         self.http_headers = {'Accept': 'application/json',
