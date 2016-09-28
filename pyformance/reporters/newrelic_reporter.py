@@ -112,7 +112,8 @@ class NewRelicReporter(Reporter):
             def metrics_generator():
                 metrics = self.create_metrics(self.registry, 'new_relic_agent_sink', 'Custom')
                 if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug('Generating a list of metrics for the new relic agent: {}', json.dumps(metrics))
+                    logger.debug('Generating a list of metrics for the new relic agent: {}'.format(
+                        json.dumps(metrics)))
                 return six.iteritems(metrics)
 
             newrelic.agent.register_data_source(metrics_generator)
