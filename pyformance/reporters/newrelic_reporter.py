@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import json
+import logging
+
 import os
 import socket
 import sys
@@ -22,6 +24,9 @@ try:
     NEWRELIC_AGENT = True
 except:
     NEWRELIC_AGENT = False
+
+
+logger = logging.getLogger("reporters.newrelic_reporter")
 
 
 class NewRelicSink(object):
@@ -106,6 +111,8 @@ class NewRelicReporter(Reporter):
             @newrelic.agent.data_source_generator(name='Pyformance')
             def metrics_generator():
                 metrics = self.create_metrics(self.registry, 'new_relic_agent_sink', 'Custom')
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug('Generating a list of metrics for the new relic agent: {}', json.dumps(metrics))
                 return six.iteritems(metrics)
 
             newrelic.agent.register_data_source(metrics_generator)
