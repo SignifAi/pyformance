@@ -2,6 +2,7 @@
 from __future__ import print_function
 import json
 import logging
+from math import ceil
 
 import os
 import socket
@@ -87,6 +88,16 @@ def format_unit(metric):
         return '[{}]'.format(metric.unit)
 
 
+def create_metric(m):
+    return {
+        "total": m,
+        "count": ceil(m),
+        "min": 0 if m == 0 else m % 1 or 1,
+        "max": 0 if m == 0 else m if m < 0 else 1,
+        "sum_of_squares": int(m) + (m % 1)**2
+    }
+
+
 class NewRelicReporter(Reporter):
     """
     Reporter for new relic
@@ -152,16 +163,15 @@ class NewRelicReporter(Reporter):
         # noinspection PyProtectedMember
         gauges = registry._gauges.items()
         for key, gauge in gauges:
-            key = '{}/gauge{}'.format(self._get_key_name(key, key_name_prefix), format_unit(gauge))
+            key = '{}/gauge'.format(self._get_key_name(key, key_name_prefix))
             results[key] = gauge.get_value()
 
         # noinspection PyProtectedMember
         for key, histogram in registry._histograms.items():
             key = self._get_key_name(key, key_name_prefix)
-            snapshot = histogram.get_snapshot()
-            key = '{}/{{}}{}'.format(key, format_unit(histogram))
+            key = '{}/{{}}'.format(key)
 
-            results[key.format('avg')] = histogram.get_mean()
+            results[key.format('mean_rate')] = create_metric(histogram.get_mean())
             results[key.format('std_dev')] = histogram.get_stddev()
             snapshot = histogram.get_snapshot()
             results[key.format('75_percentile')] = snapshot.get_75th_percentile()
@@ -171,24 +181,22 @@ class NewRelicReporter(Reporter):
 
         # noinspection PyProtectedMember
         for key, meter in registry._meters.items():
-            key = '{}/{{}}[{}/minute]'.format(self._get_key_name(key, key_name_prefix), meter.unit if meter.unit else 'event')
-
-            results[key.format('15m_rate')] = meter.get_fifteen_minute_rate()
-            results[key.format('5m_rate')] = meter.get_five_minute_rate()
-            results[key.format('1m_rate')] = meter.get_one_minute_rate()
-            results[key.format('mean_rate')] = meter.get_mean_rate()
+            key = '{}/{{}}'.format(self._get_key_name(key, key_name_prefix))
+            results[key.format('15m_rate')] = create_metric(meter.get_fifteen_minute_rate())
+            results[key.format('5m_rate')] = create_metric(meter.get_five_minute_rate())
+            results[key.format('1m_rate')] = create_metric(meter.get_one_minute_rate())
+            results[key.format('mean_rate')] = create_metric(meter.get_mean_rate())
 
         # noinspection PyProtectedMember
         for key, timer in registry._timers.items():
-            key = '{}/{{}}{}'.format(self._get_key_name(key, key_name_prefix), format_unit(timer))
+            key = '{}/{{}}'.format(self._get_key_name(key, key_name_prefix))
             snapshot = timer.get_snapshot()
-            results.update({key.format("avg"): timer.get_mean(),
-                            key.format("count"): timer.get_count(),
+            results.update({key.format("count"): timer.get_count(),
                             key.format("std_dev"): timer.get_stddev(),
-                            key.format("15m_rate"): timer.get_fifteen_minute_rate(),
-                            key.format("5m_rate"): timer.get_five_minute_rate(),
-                            key.format("1m_rate"): timer.get_one_minute_rate(),
-                            key.format("mean_rate"): timer.get_mean_rate(),
+                            key.format("15m_rate"): create_metric(timer.get_fifteen_minute_rate()),
+                            key.format("5m_rate"): create_metric(timer.get_five_minute_rate()),
+                            key.format("1m_rate"): create_metric(timer.get_one_minute_rate()),
+                            key.format("mean_rate"): create_metric(timer.get_mean_rate()),
                             key.format("50_percentile"): snapshot.get_median(),
                             key.format("75_percentile"): snapshot.get_75th_percentile(),
                             key.format("95_percentile"): snapshot.get_95th_percentile(),
@@ -204,7 +212,7 @@ class NewRelicReporter(Reporter):
 
             if not sink.count:
                 continue
-            key = "{}/{}{}".format(self._get_key_name(key, key_name_prefix), "raw", format_unit(value))
+            key = "{}/{}".format(self._get_key_name(key, key_name_prefix), "raw")
             results[key] = {
                 "total": sink.total,
                 "count": sink.count,
