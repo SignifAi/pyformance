@@ -89,11 +89,12 @@ def format_unit(metric):
 
 
 def create_metric(m):
+    count = int(ceil(m))
     return {
         "total": m,
-        "count": ceil(m),
-        "min": 0 if m == 0 else m % 1 or 1,
-        "max": 0 if m == 0 else m if m < 0 else 1,
+        "count": count,
+        "min": m % 1. if m % 1 > 0 else m if m < 1 else 1,
+        "max": m if m < 1 else 1,
         "sum_of_squares": int(m) + (m % 1)**2
     }
 
@@ -102,7 +103,6 @@ class NewRelicReporter(Reporter):
     """
     Reporter for new relic
     """
-
     MAX_METRICS_PER_REQUEST = 10000
     PLATFORM_URL = 'https://platform-api.newrelic.com/platform/v1/metrics'
 
